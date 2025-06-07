@@ -1,6 +1,7 @@
 package com.arfat.tradex.order.model;
 
 import lombok.Getter;
+import lombok.Setter;
 import lombok.ToString;
 
 import java.time.Instant;
@@ -11,6 +12,7 @@ import java.util.List;
 @ToString
 public class Order {
 
+    @Setter
     private long id;
     private final Instant timestamp;
     private final String asset;

@@ -49,6 +49,12 @@ public class OrderServiceTest {
 
     }
 
+    @Test
+    void shouldReturnOrderById() {
+        Order order = orderService.placeOrder(createBuyOrder("GOOGL", 1500.0, 2));
+        Order fetchedOrder = orderService.getOrder(order.getId());
+        assertNotNull(fetchedOrder);
+    }
 
 
     private Order createBuyOrder(String asset, double price, double amount) {
