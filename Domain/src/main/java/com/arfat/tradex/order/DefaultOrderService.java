@@ -10,8 +10,8 @@ import java.util.concurrent.ConcurrentHashMap;
 class DefaultOrderService implements OrderService {
 
     private final Map<String, Order> orders = new ConcurrentHashMap<>();
-    private final Map<String, Map<Double, List<Order>>> buyOrders = new ConcurrentHashMap<>();
-    private final Map<String, Map<Double, List<Order>>> sellOrders = new ConcurrentHashMap<>();
+    private final Map<String, TreeMap<Double, List<Order>>> buyOrders = new ConcurrentHashMap<>();
+    private final Map<String, TreeMap<Double, List<Order>>> sellOrders = new ConcurrentHashMap<>();
 
     @Override
     public Order placeOrder(Order order) {
@@ -28,18 +28,12 @@ class DefaultOrderService implements OrderService {
 
         if (null != assetOrders) {
 
-            // Implement sorting based on price
-            List<Double> sortedPrices = new ArrayList<>(assetOrders.keySet());
-            if (isBuy(incomingOrder.getDirection())) {
-                // For BUY, match with the lowest price SELLs first (ascending)
-                Collections.sort(sortedPrices);
-            } else {
-                // For SALE, match with the highest price BUYs first (descending)
-                Collections.sort(sortedPrices, Collections.reverseOrder());
-            }
-            for (Double price : sortedPrices) {
-                incomingOrder = matchOrder(incomingOrder, assetOrders.get(price));
-                if (incomingOrder.isFullyExecuted()) break;
+            var entries = isBuy(order.getDirection()) ?
+                    assetOrders.entrySet() :
+                    assetOrders.descendingMap().entrySet();
+
+            for (var entry : entries) {
+                incomingOrder = matchOrder(incomingOrder, entry.getValue());
             }
 
         }
@@ -54,7 +48,7 @@ class DefaultOrderService implements OrderService {
 
     private Order matchOrder(Order incomingOrder, List<Order> assetOrders) {
         var iterator = assetOrders.iterator();
-        while (iterator.hasNext()) {
+        while (iterator.hasNext() && !incomingOrder.isFullyExecuted()) {
             var counterOrder = iterator.next();
 
             if(incomingOrder.canMatch(counterOrder)){
@@ -95,7 +89,7 @@ class DefaultOrderService implements OrderService {
         var state = isBuy(order.getDirection()) ? buyOrders : sellOrders;
 
         // Get or create the map for the specific asset
-        state.computeIfAbsent(order.getAsset(), k -> new ConcurrentHashMap<>());
+        state.computeIfAbsent(order.getAsset(), k -> new TreeMap<>());
         Map<Double, List<Order>> ordersByPrice = state.get(order.getAsset());
 
         // Get or create the list for the specific price
