@@ -1,6 +1,6 @@
 package com.arfat.tradex.order;
 
-public class OrderNotFoundException extends RuntimeException {
+public final class OrderNotFoundException extends RuntimeException {
     public OrderNotFoundException(String message) {
         super(message);
     }

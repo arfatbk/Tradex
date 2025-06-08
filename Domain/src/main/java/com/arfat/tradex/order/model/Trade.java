@@ -5,7 +5,7 @@ import lombok.Getter;
 
 @Getter
 @Builder
-public class Trade {
+public final class Trade {
     private String orderId;
     private double amount;
     private double price;

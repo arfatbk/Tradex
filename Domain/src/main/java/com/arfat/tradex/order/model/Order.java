@@ -10,7 +10,7 @@ import java.util.List;
 
 @Getter
 @ToString
-public class Order {
+public final class Order {
 
     @Setter
     private String id;

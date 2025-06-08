@@ -3,15 +3,17 @@ package com.arfat.tradex.order;
 import com.arfat.tradex.order.model.Direction;
 import com.arfat.tradex.order.model.Order;
 import com.arfat.tradex.order.model.Trade;
+import com.arfat.tradex.persistence.Persistence;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
-class DefaultOrderService implements OrderService {
+final class DefaultOrderService implements OrderService {
 
-    private final Map<String, Order> orders = new ConcurrentHashMap<>();
-    private final Map<String, NavigableMap<Double, List<Order>>> buyOrders = new ConcurrentHashMap<>();
-    private final Map<String, NavigableMap<Double, List<Order>>> sellOrders = new ConcurrentHashMap<>();
+    private final Persistence persistence;
+
+    DefaultOrderService(Persistence persistence) {
+        this.persistence = persistence;
+    }
 
     @Override
     public Order placeOrder(Order order) {
@@ -19,34 +21,41 @@ class DefaultOrderService implements OrderService {
         return processOrder(order);
     }
 
-    private Order processOrder(Order order) {
-
-        var incomingOrder = order;
-        var counterOrders = isBuy(incomingOrder.getDirection()) ? sellOrders : buyOrders;
-
-        var assetOrders = counterOrders.get(incomingOrder.getAsset());
-
-        if (null != assetOrders) {
-
-            var entries = isBuy(order.getDirection()) ?
-                    assetOrders.entrySet() :
-                    assetOrders.descendingMap().entrySet();
-
-            for (var entry : entries) {
-                incomingOrder = matchOrder(incomingOrder, entry.getValue());
-            }
-
-        }
-
-        if (!incomingOrder.isFullyExecuted()) {
-            addOrderIntoState(incomingOrder);
-        }
-
-        orders.put(incomingOrder.getId(), incomingOrder);
-        return incomingOrder;
+    private static Trade getTrade(Order order, double assetAmount, double assetPrice) {
+        return Trade.builder()
+                .orderId(order.getId())
+                .amount(assetAmount)
+                .price(assetPrice)
+                .build();
     }
 
-    private Order matchOrder(Order incomingOrder, List<Order> assetOrders) {
+    private Order processOrder(Order order) {
+
+        var counterOrders = isBuy(order.getDirection()) ? persistence.sellOrders() : persistence.buyOrders();
+
+        var assetOrders = counterOrders.get(order.getAsset());
+
+        if (null != assetOrders) {
+            for (var entry : getEntries(order, assetOrders)) {
+                matchOrder(order, entry.getValue());
+            }
+        }
+
+        if (!order.isFullyExecuted()) {
+            addOrderIntoState(order);
+        }
+
+        persistence.addOrder(order);
+        return order;
+    }
+
+    private Set<Map.Entry<Double, List<Order>>> getEntries(Order order, NavigableMap<Double, List<Order>> assetOrders) {
+        return isBuy(order.getDirection()) ?
+                assetOrders.entrySet() :
+                assetOrders.descendingMap().entrySet();
+    }
+
+    private void matchOrder(Order incomingOrder, List<Order> assetOrders) {
         var iterator = assetOrders.iterator();
         while (iterator.hasNext() && !incomingOrder.isFullyExecuted()) {
             var counterOrder = iterator.next();
@@ -55,38 +64,29 @@ class DefaultOrderService implements OrderService {
                 double assetAmount = Math.min(incomingOrder.getPendingAmount(), counterOrder.getPendingAmount());
                 double assetPrice = counterOrder.getPrice();
 
-                Trade buyerTrade = Trade.builder()
-                        .orderId(counterOrder.getId())
-                        .amount(assetAmount)
-                        .price(assetPrice)
-                        .build();
+                Trade buyerTrade = getTrade(counterOrder, assetAmount, assetPrice);
+                Trade sellerTrade = getTrade(incomingOrder, assetAmount, assetPrice);
 
-                Trade sellerTrade = Trade.builder()
-                        .orderId(incomingOrder.getId())
-                        .amount(assetAmount)
-                        .price(assetPrice)
-                        .build();
+                counterOrder.addTrade(sellerTrade);
+                incomingOrder.addTrade(buyerTrade);
 
-                var updatedCounterOrder = counterOrder.addTrade(sellerTrade);
-                var updatedIncomingOrder = incomingOrder.addTrade(buyerTrade);
-
-                orders.put(updatedCounterOrder.getId(), updatedCounterOrder);
+                persistence.addOrder(counterOrder);
 
                 //Remove the counterOrder if it is fully executed
-                if(updatedCounterOrder.isFullyExecuted()){
+                if (counterOrder.isFullyExecuted()) {
                     iterator.remove();
                 }
 
-                return updatedIncomingOrder;
             }
         }
 
-        return incomingOrder;
     }
 
     private void addOrderIntoState(Order order) {
         // Determine the state based on the order direction
-        var state = isBuy(order.getDirection()) ? buyOrders : sellOrders;
+        var state = isBuy(order.getDirection()) ?
+                persistence.buyOrders() :
+                persistence.sellOrders();
 
         // Get or create the map for the specific asset
         state.computeIfAbsent(order.getAsset(), k -> new TreeMap<>());
@@ -105,7 +105,7 @@ class DefaultOrderService implements OrderService {
 
     @Override
     public Order getOrder(String orderId) throws OrderNotFoundException {
-        return Optional.ofNullable(orders.get(orderId))
+        return Optional.ofNullable(persistence.getOrder(orderId))
                 .orElseThrow(() -> new OrderNotFoundException("Order with ID " + orderId + " not found."));
     }
 }

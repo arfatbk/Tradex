@@ -15,7 +15,7 @@ public class OrderServiceTest {
 
     @BeforeEach
     void init() {
-        orderService = new DefaultOrderService();
+        orderService = new DefaultOrderService(new StateMachineStub());
     }
 
     @ParameterizedTest
