@@ -40,8 +40,10 @@ public class OrderServiceTest {
     @Test
     void shouldThrowExceptionWhenOrderNotFound() {
 
-        var ex = assertThrows(OrderNotFoundException.class, () -> orderService.getOrder(1));
-        assertEquals("Order with ID 1 not found.", ex.getMessage());
+        var orderId = "WRONG_ID";
+        var ex = assertThrows(OrderNotFoundException.class, () -> orderService.getOrder(orderId));
+        String expected = String.format("Order with ID %s not found.", orderId);
+        assertEquals(expected, ex.getMessage());
 
     }
 
@@ -129,8 +131,6 @@ public class OrderServiceTest {
         assertTrue(fetchedBuyOrder.isFullyExecuted());
         assertTrue(fetchedSellOrder.isFullyExecuted());
 
-        //TODO: Flaky test, orderID is currentTimeMillis hence getOrderBy id matching wrong order
-        // Both orders are having the same id
         assertEquals(1, fetchedBuyOrder.getTrades().size());
         assertEquals(1, fetchedSellOrder.getTrades().size());
     }

@@ -5,5 +5,5 @@ import com.arfat.tradex.order.model.Order;
 public interface OrderService {
     Order placeOrder(Order order);
 
-    Order getOrder(long orderId) throws OrderNotFoundException;
+    Order getOrder(String orderId) throws OrderNotFoundException;
 }

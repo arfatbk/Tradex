@@ -9,13 +9,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 class DefaultOrderService implements OrderService {
 
-    private final Map<Long, Order> orders = new ConcurrentHashMap<>();
+    private final Map<String, Order> orders = new ConcurrentHashMap<>();
     private final Map<String, Map<Double, List<Order>>> buyOrders = new ConcurrentHashMap<>();
     private final Map<String, Map<Double, List<Order>>> sellOrders = new ConcurrentHashMap<>();
 
     @Override
     public Order placeOrder(Order order) {
-        order.setId(System.currentTimeMillis());
+        order.setId(UUID.randomUUID().toString());
         return processOrder(order);
     }
 
@@ -101,7 +101,7 @@ class DefaultOrderService implements OrderService {
     }
 
     @Override
-    public Order getOrder(long orderId) throws OrderNotFoundException {
+    public Order getOrder(String orderId) throws OrderNotFoundException {
         return Optional.ofNullable(orders.get(orderId))
                 .orElseThrow(() -> new OrderNotFoundException("Order with ID " + orderId + " not found."));
     }

@@ -13,8 +13,7 @@ import java.util.List;
 public class Order {
 
     @Setter
-    //TODO: Improve id generation strategy
-    private long id;
+    private String id;
     private final Instant timestamp;
     private final String asset;
     private final double price;
