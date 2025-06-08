@@ -5,7 +5,7 @@ import com.arfat.tradex.order.model.Order;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -19,8 +19,8 @@ public class OrderServiceTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"SELL", "BUY"})
-    void shouldCreateAnOrder(String direction) {
+    @EnumSource(Direction.class)
+    void shouldCreateAnOrder(Direction direction) {
 
         Order orderRequest = isBuy(direction) ?
                 createBuyOrder("APL", 100.0, 1) :
@@ -38,8 +38,7 @@ public class OrderServiceTest {
 
 
     @Test
-
-    void shouldThrowExceptionWhenOrderNotFound(){
+    void shouldThrowExceptionWhenOrderNotFound() {
 
         var ex = assertThrows(OrderNotFoundException.class, () -> orderService.getOrder(1));
         assertEquals("Order with ID 1 not found.", ex.getMessage());
@@ -54,6 +53,55 @@ public class OrderServiceTest {
     }
 
 
+    @Test
+    void shouldNotMatch_WhenAssetIsDifferent() {
+        Order buy = orderService.placeOrder(createBuyOrder("APL", 1500.0, 2));
+        Order sell = orderService.placeOrder(createSellOrder("GOOGL", 1500.0, 2));
+
+        Order fetchedBuyOrder = orderService.getOrder(buy.getId());
+        Order fetchedSellOrder = orderService.getOrder(sell.getId());
+
+        assertEquals(2, fetchedBuyOrder.getPendingAmount());
+        assertEquals(2, fetchedSellOrder.getPendingAmount());
+
+        assertEquals(0, fetchedBuyOrder.getTrades().size());
+        assertEquals(0, fetchedSellOrder.getTrades().size());
+
+    }
+
+    @Test
+    void shouldNotMatch_WhenPriceDifferent() {
+        Order buy = orderService.placeOrder(createBuyOrder("APL", 1400.0, 2));
+        Order sell = orderService.placeOrder(createSellOrder("APL", 1500.0, 2));
+
+        Order fetchedBuyOrder = orderService.getOrder(buy.getId());
+        Order fetchedSellOrder = orderService.getOrder(sell.getId());
+
+        assertEquals(2, fetchedBuyOrder.getPendingAmount());
+        assertEquals(2, fetchedSellOrder.getPendingAmount());
+
+        assertEquals(0, fetchedBuyOrder.getTrades().size());
+        assertEquals(0, fetchedSellOrder.getTrades().size());
+
+    }
+
+    @Test
+    void shouldMatch_WhenPriceAndAssetSame() {
+        Order buy = orderService.placeOrder(createBuyOrder("APL", 1500.0, 2));
+        Order sell = orderService.placeOrder(createSellOrder("APL", 1500.0, 2));
+
+        Order fetchedBuyOrder = orderService.getOrder(buy.getId());
+        Order fetchedSellOrder = orderService.getOrder(sell.getId());
+
+        assertEquals(0, fetchedBuyOrder.getPendingAmount());
+        assertEquals(0, fetchedSellOrder.getPendingAmount());
+
+        assertEquals(1, fetchedBuyOrder.getTrades().size());
+        assertEquals(1, fetchedSellOrder.getTrades().size());
+
+
+    }
+
     private Order createBuyOrder(String asset, double price, double amount) {
         return new Order(asset, price, amount, Direction.BUY);
     }
@@ -61,7 +109,8 @@ public class OrderServiceTest {
     private Order createSellOrder(String asset, double price, double amount) {
         return new Order(asset, price, amount, Direction.SELL);
     }
-    private static boolean isBuy(String direction) {
-        return direction.equals("BUY");
+
+    private static boolean isBuy(Direction direction) {
+        return direction == Direction.BUY;
     }
 }
