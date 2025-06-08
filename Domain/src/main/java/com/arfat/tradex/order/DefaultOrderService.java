@@ -10,8 +10,8 @@ import java.util.concurrent.ConcurrentHashMap;
 class DefaultOrderService implements OrderService {
 
     private final Map<String, Order> orders = new ConcurrentHashMap<>();
-    private final Map<String, TreeMap<Double, List<Order>>> buyOrders = new ConcurrentHashMap<>();
-    private final Map<String, TreeMap<Double, List<Order>>> sellOrders = new ConcurrentHashMap<>();
+    private final Map<String, NavigableMap<Double, List<Order>>> buyOrders = new ConcurrentHashMap<>();
+    private final Map<String, NavigableMap<Double, List<Order>>> sellOrders = new ConcurrentHashMap<>();
 
     @Override
     public Order placeOrder(Order order) {
