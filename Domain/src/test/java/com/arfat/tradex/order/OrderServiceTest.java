@@ -139,18 +139,37 @@ public class OrderServiceTest {
     @Test
     void shouldReturnCorrectState_WhenOrderIsPartiallyMatched() {
         Order buy = orderService.placeOrder(createBuyOrder("APL", 1500.0, 2));
+        Order sell = orderService.placeOrder(createSellOrder("APL", 1500.0, 1));
+
+        Order fetchedBuyOrder = orderService.getOrder(buy.getId());
+        Order fetchedSellOrder = orderService.getOrder(sell.getId());
+
+        assertEquals(1, fetchedBuyOrder.getPendingAmount());
+        assertEquals(0, fetchedSellOrder.getPendingAmount());
+
+        assertEquals(1, fetchedBuyOrder.getTrades().size());
+        assertEquals(1, fetchedSellOrder.getTrades().size());
+    }
+
+
+    @Test
+    void shouldReturnCorrectState_WhenMultipleOrdersFulfillOneOrder() {
+        Order buy = orderService.placeOrder(createBuyOrder("APL", 1500.0, 2));
         Order sell1 = orderService.placeOrder(createSellOrder("APL", 1500.0, 1));
+        Order sell2 = orderService.placeOrder(createSellOrder("APL", 1500.0, 1));
 
         Order fetchedBuyOrder = orderService.getOrder(buy.getId());
         Order fetchedSell1Order = orderService.getOrder(sell1.getId());
+        Order fetchedSell2Order = orderService.getOrder(sell2.getId());
 
-        assertEquals(1, fetchedBuyOrder.getPendingAmount());
+        assertEquals(0, fetchedBuyOrder.getPendingAmount());
         assertEquals(0, fetchedSell1Order.getPendingAmount());
+        assertEquals(0, fetchedSell2Order.getPendingAmount());
 
-        assertEquals(1, fetchedBuyOrder.getTrades().size());
+        assertEquals(2, fetchedBuyOrder.getTrades().size());
         assertEquals(1, fetchedSell1Order.getTrades().size());
+        assertEquals(1, fetchedSell2Order.getTrades().size());
     }
-
 
     private Order createBuyOrder(String asset, double price, double amount) {
         return new Order(asset, price, amount, Direction.BUY);
