@@ -98,9 +98,59 @@ public class OrderServiceTest {
 
         assertEquals(1, fetchedBuyOrder.getTrades().size());
         assertEquals(1, fetchedSellOrder.getTrades().size());
-
-
     }
+
+    @Test
+    void shouldReturnPendingAmountZero_WhenOrderIsMatched(){
+        Order buy = orderService.placeOrder(createBuyOrder("APL", 1500.0, 2));
+        Order sell = orderService.placeOrder(createSellOrder("APL", 1500.0, 2));
+
+        Order fetchedBuyOrder = orderService.getOrder(buy.getId());
+        Order fetchedSellOrder = orderService.getOrder(sell.getId());
+
+        assertEquals(0, fetchedBuyOrder.getPendingAmount());
+        assertEquals(0, fetchedSellOrder.getPendingAmount());
+
+        assertEquals(1, fetchedBuyOrder.getTrades().size());
+        assertEquals(1, fetchedSellOrder.getTrades().size());
+
+        assertEquals(0, fetchedBuyOrder.getPendingAmount());
+        assertEquals(0, fetchedSellOrder.getPendingAmount());
+    }
+
+    @Test
+    void shouldReturnValidOrderState_WhenOrderIsFullyMatched(){
+        Order buy = orderService.placeOrder(createBuyOrder("APL", 1500.0, 2));
+        Order sell = orderService.placeOrder(createSellOrder("APL", 1500.0, 2));
+
+        Order fetchedBuyOrder = orderService.getOrder(buy.getId());
+        Order fetchedSellOrder = orderService.getOrder(sell.getId());
+
+        assertTrue(fetchedBuyOrder.isFullyExecuted());
+        assertTrue(fetchedSellOrder.isFullyExecuted());
+
+        //TODO: Flaky test, orderID is currentTimeMillis hence getOrderBy id matching wrong order
+        // Both orders are having the same id
+        assertEquals(1, fetchedBuyOrder.getTrades().size());
+        assertEquals(1, fetchedSellOrder.getTrades().size());
+    }
+
+
+    @Test
+    void shouldReturnCorrectState_WhenOrderIsPartiallyMatched() {
+        Order buy = orderService.placeOrder(createBuyOrder("APL", 1500.0, 2));
+        Order sell1 = orderService.placeOrder(createSellOrder("APL", 1500.0, 1));
+
+        Order fetchedBuyOrder = orderService.getOrder(buy.getId());
+        Order fetchedSell1Order = orderService.getOrder(sell1.getId());
+
+        assertEquals(1, fetchedBuyOrder.getPendingAmount());
+        assertEquals(0, fetchedSell1Order.getPendingAmount());
+
+        assertEquals(1, fetchedBuyOrder.getTrades().size());
+        assertEquals(1, fetchedSell1Order.getTrades().size());
+    }
+
 
     private Order createBuyOrder(String asset, double price, double amount) {
         return new Order(asset, price, amount, Direction.BUY);

@@ -21,29 +21,32 @@ class DefaultOrderService implements OrderService {
 
     private Order processOrder(Order order) {
 
-        var counterOrders = isBuy(order.getDirection()) ? sellOrders : buyOrders;
+        var incomingOrder = order;
+        var counterOrders = isBuy(incomingOrder.getDirection()) ? sellOrders : buyOrders;
 
-        var assetOrders = counterOrders.get(order.getAsset());
+        var assetOrders = counterOrders.get(incomingOrder.getAsset());
 
         if (null != assetOrders) {
 
             //TODO: Implement sorting based on price
             for (Map.Entry<Double, List<Order>> entry : assetOrders.entrySet()) {
-                matchOrder(order, entry.getValue());
+                incomingOrder = matchOrder(incomingOrder, entry.getValue());
             }
 
         }
 
-        //TODO: only add when not fully executed
-        addOrderIntoState(order);
+        if (!incomingOrder.isFullyExecuted()) {
+            addOrderIntoState(incomingOrder);
+        }
 
-        //TODO: Should add when not fully executed??????
-        orders.put(order.getId(), order);
-        return order;
+        orders.put(incomingOrder.getId(), incomingOrder);
+        return incomingOrder;
     }
 
     private Order matchOrder(Order incomingOrder, List<Order> assetOrders) {
-        for (Order counterOrder : assetOrders) {
+        var iterator = assetOrders.iterator();
+        while (iterator.hasNext()) {
+            var counterOrder = iterator.next();
 
             if(incomingOrder.canMatch(counterOrder)){
                 double assetAmount = Math.min(incomingOrder.getPendingAmount(), counterOrder.getPendingAmount());
@@ -61,11 +64,20 @@ class DefaultOrderService implements OrderService {
                         .price(assetPrice)
                         .build();
 
-                counterOrder.addTrade(sellerTrade);
-                incomingOrder.addTrade(buyerTrade);
+                var updatedCounterOrder = counterOrder.addTrade(sellerTrade);
+                var updatedIncomingOrder = incomingOrder.addTrade(buyerTrade);
 
+                orders.put(updatedCounterOrder.getId(), updatedCounterOrder);
+
+                //Remove the counterOrder if it is fully executed
+                if(updatedCounterOrder.isFullyExecuted()){
+                    iterator.remove();
+                }
+
+                return updatedIncomingOrder;
             }
         }
+
         return incomingOrder;
     }
 

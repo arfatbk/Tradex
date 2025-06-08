@@ -13,6 +13,7 @@ import java.util.List;
 public class Order {
 
     @Setter
+    //TODO: Improve id generation strategy
     private long id;
     private final Instant timestamp;
     private final String asset;
@@ -44,8 +45,13 @@ public class Order {
         return false;
     }
 
-    public void addTrade(Trade trade) {
-        trades.add(trade);
+    public Order addTrade(Trade trade) {
         this.pendingAmount -= trade.getAmount();
+        trades.add(trade);
+        return this;
+    }
+
+    public boolean isFullyExecuted() {
+        return 0 == pendingAmount;
     }
 }
