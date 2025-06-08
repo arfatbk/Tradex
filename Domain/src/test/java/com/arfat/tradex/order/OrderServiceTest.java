@@ -103,7 +103,7 @@ public class OrderServiceTest {
     }
 
     @Test
-    void shouldReturnPendingAmountZero_WhenOrderIsMatched(){
+    void shouldReturnPendingAmountZero_WhenOrderIsMatched() {
         Order buy = orderService.placeOrder(createBuyOrder("APL", 1500.0, 2));
         Order sell = orderService.placeOrder(createSellOrder("APL", 1500.0, 2));
 
@@ -121,7 +121,7 @@ public class OrderServiceTest {
     }
 
     @Test
-    void shouldReturnValidOrderState_WhenOrderIsFullyMatched(){
+    void shouldReturnValidOrderState_WhenOrderIsFullyMatched() {
         Order buy = orderService.placeOrder(createBuyOrder("APL", 1500.0, 2));
         Order sell = orderService.placeOrder(createSellOrder("APL", 1500.0, 2));
 
@@ -191,6 +191,84 @@ public class OrderServiceTest {
 
         assertEquals(1, fetchedSell1Order.getPendingAmount()); // sell1 (1400.0) should remain untouched
         assertEquals(0, fetchedSell1Order.getTrades().size());
+    }
+
+    @Test
+    void shouldMatchBuyOrdersWithBestPriceFirst() {
+        // Place two buy orders at different prices
+        Order buy1 = orderService.placeOrder(createBuyOrder("APL", 1300.0, 1));
+        Order buy2 = orderService.placeOrder(createBuyOrder("APL", 1500.0, 1));
+        // Place a sell order that can match both
+        Order sell = orderService.placeOrder(createSellOrder("APL", 1200.0, 1));
+
+        // Should match with the highest buy price first (1500.0)
+        Order fetchedBuy1Order = orderService.getOrder(buy1.getId());
+        Order fetchedBuy2Order = orderService.getOrder(buy2.getId());
+        Order fetchedSellOrder = orderService.getOrder(sell.getId());
+
+        assertEquals(1, fetchedBuy1Order.getPendingAmount()); // Lower price should remain unmatched
+        assertEquals(0, fetchedBuy2Order.getPendingAmount()); // Higher price should be matched
+        assertEquals(0, fetchedSellOrder.getPendingAmount());
+    }
+
+    @Test
+    void shouldHandleExactPriceMatch() {
+        Order buy = orderService.placeOrder(createBuyOrder("APL", 1500.0, 1));
+        Order sell1 = orderService.placeOrder(createSellOrder("APL", 1501.0, 1)); // Should not match
+        Order sell2 = orderService.placeOrder(createSellOrder("APL", 1500.0, 1)); // Should match exactly
+
+        Order fetchedBuyOrder = orderService.getOrder(buy.getId());
+        Order fetchedSell1Order = orderService.getOrder(sell1.getId());
+        Order fetchedSell2Order = orderService.getOrder(sell2.getId());
+
+        assertEquals(0, fetchedBuyOrder.getPendingAmount());
+        assertEquals(1, fetchedSell1Order.getPendingAmount());
+        assertEquals(0, fetchedSell2Order.getPendingAmount());
+    }
+
+
+    @Test
+    void shouldHandleMultiplePartialMatches() {
+        // Place a large buy order
+        Order buy = orderService.placeOrder(createBuyOrder("APL", 1500.0, 3));
+
+        // Place multiple smaller sell orders
+        Order sell1 = orderService.placeOrder(createSellOrder("APL", 1500.0, 1));
+        Order sell2 = orderService.placeOrder(createSellOrder("APL", 1500.0, 1));
+        Order sell3 = orderService.placeOrder(createSellOrder("APL", 1500.0, 0.5));
+
+        Order fetchedBuyOrder = orderService.getOrder(buy.getId());
+        Order fetchedSell1Order = orderService.getOrder(sell1.getId());
+        Order fetchedSell2Order = orderService.getOrder(sell2.getId());
+        Order fetchedSell3Order = orderService.getOrder(sell3.getId());
+
+        assertEquals(0.5, fetchedBuyOrder.getPendingAmount());
+        assertEquals(3, fetchedBuyOrder.getTrades().size());
+        assertEquals(0, fetchedSell1Order.getPendingAmount());
+        assertEquals(0, fetchedSell2Order.getPendingAmount());
+        assertEquals(0, fetchedSell3Order.getPendingAmount());
+    }
+
+    @Test
+    void shouldMatchOrdersInPriceTimeOrder() {
+        // Place sell orders in sequence
+        Order sell1 = orderService.placeOrder(createSellOrder("APL", 1500.0, 1)); // First at 1500
+        Order sell2 = orderService.placeOrder(createSellOrder("APL", 1500.0, 1)); // Second at 1500
+        Order sell3 = orderService.placeOrder(createSellOrder("APL", 1400.0, 1)); // Better price
+
+        // Place buy order that can match with any
+        Order buy = orderService.placeOrder(createBuyOrder("APL", 1500.0, 1));
+
+        Order fetchedBuyOrder = orderService.getOrder(buy.getId());
+        Order fetchedSell1Order = orderService.getOrder(sell1.getId());
+        Order fetchedSell2Order = orderService.getOrder(sell2.getId());
+        Order fetchedSell3Order = orderService.getOrder(sell3.getId());
+
+        // Should match with sell3 due to best price
+        assertEquals(0, fetchedBuyOrder.getPendingAmount());
+        assertEquals(1, fetchedSell1Order.getPendingAmount());
+        assertEquals(1, fetchedSell2Order.getPendingAmount());
+        assertEquals(0, fetchedSell3Order.getPendingAmount());
     }
 
     private Order createBuyOrder(String asset, double price, double amount) {

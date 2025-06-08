@@ -94,7 +94,7 @@ class DefaultOrderService implements OrderService {
 
         // Get or create the list for the specific price
         var ordersAtPrice = ordersByPrice.computeIfAbsent(order.getPrice(), k -> new ArrayList<>());
-        // Add the order to the list at the specific price
+        // Add the order to the list
         ordersAtPrice.add(order);
 
     }

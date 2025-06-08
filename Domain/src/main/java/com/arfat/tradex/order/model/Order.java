@@ -23,12 +23,28 @@ public class Order {
     private final List<Trade> trades = new ArrayList<>();
 
     public Order(String asset, double price, double amount, Direction direction) {
+        this.validate(asset, price, amount, direction);
         this.asset = asset;
         this.price = price;
         this.amount = amount;
         this.direction = direction;
         this.timestamp = Instant.now();
         this.pendingAmount = amount;
+    }
+
+    private void validate(String asset, double price, double amount, Direction direction) {
+        if (amount <= 0) {
+            throw new IllegalArgumentException("Order amount must be greater than zero");
+        }
+        if (price <= 0) {
+            throw new IllegalArgumentException("Order price must be greater than zero");
+        }
+        if (null == asset || asset.isBlank()) {
+            throw new IllegalArgumentException("Asset must not be null or empty");
+        }
+        if (null == direction) {
+            throw new IllegalArgumentException("Direction must either BUY or SELL");
+        }
     }
 
 
