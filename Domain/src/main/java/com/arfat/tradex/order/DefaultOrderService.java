@@ -28,9 +28,18 @@ class DefaultOrderService implements OrderService {
 
         if (null != assetOrders) {
 
-            //TODO: Implement sorting based on price
-            for (Map.Entry<Double, List<Order>> entry : assetOrders.entrySet()) {
-                incomingOrder = matchOrder(incomingOrder, entry.getValue());
+            // Implement sorting based on price
+            List<Double> sortedPrices = new ArrayList<>(assetOrders.keySet());
+            if (isBuy(incomingOrder.getDirection())) {
+                // For BUY, match with the lowest price SELLs first (ascending)
+                Collections.sort(sortedPrices);
+            } else {
+                // For SALE, match with the highest price BUYs first (descending)
+                Collections.sort(sortedPrices, Collections.reverseOrder());
+            }
+            for (Double price : sortedPrices) {
+                incomingOrder = matchOrder(incomingOrder, assetOrders.get(price));
+                if (incomingOrder.isFullyExecuted()) break;
             }
 
         }

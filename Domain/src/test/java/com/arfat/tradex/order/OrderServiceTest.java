@@ -171,6 +171,28 @@ public class OrderServiceTest {
         assertEquals(1, fetchedSell2Order.getTrades().size());
     }
 
+    @Test
+    void shouldMatchWithBestPrice() {
+        // Place two sell orders at different prices
+        Order sell1 = orderService.placeOrder(createSellOrder("APL", 1400.0, 1));
+        Order sell2 = orderService.placeOrder(createSellOrder("APL", 1300.0, 1));
+        // Place a buy order that can match both
+        Order buy = orderService.placeOrder(createBuyOrder("APL", 1500.0, 1));
+
+        Order fetchedBuyOrder = orderService.getOrder(buy.getId());
+        Order fetchedSell1Order = orderService.getOrder(sell1.getId());
+        Order fetchedSell2Order = orderService.getOrder(sell2.getId());
+
+        // The buy order should match with the lowest price sell order (1300.0)
+        assertEquals(0, fetchedBuyOrder.getPendingAmount());
+        assertEquals(1, fetchedBuyOrder.getTrades().size());
+        assertEquals(0, fetchedSell2Order.getPendingAmount()); // sell2 (1300.0) should be matched
+        assertEquals(1, fetchedSell2Order.getTrades().size());
+
+        assertEquals(1, fetchedSell1Order.getPendingAmount()); // sell1 (1400.0) should remain untouched
+        assertEquals(0, fetchedSell1Order.getTrades().size());
+    }
+
     private Order createBuyOrder(String asset, double price, double amount) {
         return new Order(asset, price, amount, Direction.BUY);
     }
