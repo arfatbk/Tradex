@@ -21,7 +21,14 @@ final class DefaultOrderService implements OrderService {
         return processOrder(order);
     }
 
-    private static Trade getTrade(Order order, double assetAmount, double assetPrice) {
+    @Override
+    public Order getOrder(String orderId) throws OrderNotFoundException {
+        return Optional.ofNullable(persistence.getOrder(orderId))
+                .orElseThrow(() -> new OrderNotFoundException("Order with ID " + orderId + " not found."));
+    }
+
+
+    private Trade getTrade(Order order, double assetAmount, double assetPrice) {
         return Trade.builder()
                 .orderId(order.getId())
                 .amount(assetAmount)
@@ -64,8 +71,8 @@ final class DefaultOrderService implements OrderService {
                 double assetAmount = Math.min(incomingOrder.getPendingAmount(), counterOrder.getPendingAmount());
                 double assetPrice = counterOrder.getPrice();
 
-                Trade buyerTrade = getTrade(counterOrder, assetAmount, assetPrice);
-                Trade sellerTrade = getTrade(incomingOrder, assetAmount, assetPrice);
+                Trade buyerTrade = this.getTrade(counterOrder, assetAmount, assetPrice);
+                Trade sellerTrade = this.getTrade(incomingOrder, assetAmount, assetPrice);
 
                 counterOrder.addTrade(sellerTrade);
                 incomingOrder.addTrade(buyerTrade);
@@ -103,9 +110,4 @@ final class DefaultOrderService implements OrderService {
         return Direction.BUY.equals(direction);
     }
 
-    @Override
-    public Order getOrder(String orderId) throws OrderNotFoundException {
-        return Optional.ofNullable(persistence.getOrder(orderId))
-                .orElseThrow(() -> new OrderNotFoundException("Order with ID " + orderId + " not found."));
-    }
 }
