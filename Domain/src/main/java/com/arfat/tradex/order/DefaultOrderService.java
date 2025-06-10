@@ -67,23 +67,25 @@ final class DefaultOrderService implements OrderService {
         while (iterator.hasNext() && !incomingOrder.isFullyExecuted()) {
             var counterOrder = iterator.next();
 
-            if(incomingOrder.canMatch(counterOrder)){
-                double assetAmount = Math.min(incomingOrder.getPendingAmount(), counterOrder.getPendingAmount());
-                double assetPrice = counterOrder.getPrice();
+            synchronized (this) {
+                if (incomingOrder.canMatch(counterOrder)) {
+                    double assetAmount = Math.min(incomingOrder.getPendingAmount(), counterOrder.getPendingAmount());
+                    double assetPrice = counterOrder.getPrice();
 
-                Trade buyerTrade = this.getTrade(counterOrder, assetAmount, assetPrice);
-                Trade sellerTrade = this.getTrade(incomingOrder, assetAmount, assetPrice);
+                    Trade buyerTrade = this.getTrade(counterOrder, assetAmount, assetPrice);
+                    Trade sellerTrade = this.getTrade(incomingOrder, assetAmount, assetPrice);
 
-                counterOrder.addTrade(sellerTrade);
-                incomingOrder.addTrade(buyerTrade);
+                    counterOrder.addTrade(sellerTrade);
+                    incomingOrder.addTrade(buyerTrade);
 
-                persistence.addOrder(counterOrder);
+                    persistence.addOrder(counterOrder);
 
-                //Remove the counterOrder if it is fully executed
-                if (counterOrder.isFullyExecuted()) {
-                    iterator.remove();
+                    //Remove the counterOrder if it is fully executed
+                    if (counterOrder.isFullyExecuted()) {
+                        iterator.remove();
+                    }
+
                 }
-
             }
         }
 
@@ -111,3 +113,4 @@ final class DefaultOrderService implements OrderService {
     }
 
 }
+
