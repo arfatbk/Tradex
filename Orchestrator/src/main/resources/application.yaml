@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: Tradex
+
+#Remove below to disable structured JSON logging
+logging:
+  structured:
+    format:
+      console: ecs
+

@@ -4,11 +4,14 @@ import com.arfat.tradex.order.model.Direction;
 import com.arfat.tradex.order.model.Order;
 import com.arfat.tradex.order.model.Trade;
 import com.arfat.tradex.persistence.Persistence;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
 final class DefaultOrderService implements OrderService {
 
+    private final static Logger log = LoggerFactory.getLogger(DefaultOrderService.class);
     private final Persistence persistence;
 
     DefaultOrderService(Persistence persistence) {
@@ -18,6 +21,7 @@ final class DefaultOrderService implements OrderService {
     @Override
     public Order placeOrder(Order order) {
         order.setId(UUID.randomUUID().toString());
+        log.debug("processing order with id: {}", order.getId());
         return processOrder(order);
     }
 
@@ -43,12 +47,16 @@ final class DefaultOrderService implements OrderService {
         var assetOrders = counterOrders.get(order.getAsset());
 
         if (null != assetOrders) {
+            log.debug("Found counter orders with size: {}", assetOrders.size());
             for (var entry : getEntries(order, assetOrders)) {
                 matchOrder(order, entry.getValue());
             }
+        } else {
+            log.info("No counter orders found for asset: {}", order.getAsset());
         }
 
         if (!order.isFullyExecuted()) {
+            log.debug("Order with ID {} is not fully executed, adding to state.", order.getId());
             addOrderIntoState(order);
         }
 
@@ -80,11 +88,14 @@ final class DefaultOrderService implements OrderService {
 
                     persistence.addOrder(counterOrder);
 
+                    log.info("Matched order {} with counter order {} for asset {} at price {} with amount {}",
+                            incomingOrder.getId(), counterOrder.getId(), incomingOrder.getAsset(), assetPrice, assetAmount);
+
                     //Remove the counterOrder if it is fully executed
                     if (counterOrder.isFullyExecuted()) {
+                        log.info("Counter order {} is fully executed and will be removed from state.", counterOrder.getId());
                         iterator.remove();
                     }
-
                 }
             }
         }
@@ -103,6 +114,8 @@ final class DefaultOrderService implements OrderService {
 
         // Get or create the list for the specific price
         var ordersAtPrice = ordersByPrice.computeIfAbsent(order.getPrice(), k -> new ArrayList<>());
+
+        log.debug("ordersAtPrice size {}", ordersAtPrice.size());
         // Add the order to the list
         ordersAtPrice.add(order);
 
