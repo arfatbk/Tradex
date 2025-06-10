@@ -1,10 +1,12 @@
 package com.arfat.tradex.order.model;
 
-import lombok.Builder;
-import lombok.Getter;
+import lombok.*;
 
 @Getter
+@Setter
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public final class Trade {
     private String orderId;
     private double amount;

@@ -23,7 +23,7 @@ public class OrdersController {
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> placeOrder(@Validated @RequestBody OrderRequest orderRequest) {
         Order order = orderService.placeOrder(OrderRequest.toOrder(orderRequest));
-        URI location = URI.create("/orders/" + order.getId());
+        URI location = URI.create(order.getId());
         return ResponseEntity.created(location).build();
     }
 
