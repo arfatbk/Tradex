@@ -48,7 +48,7 @@ final class DefaultOrderService implements OrderService {
 
         if (null != assetOrders) {
             log.debug("Found counter orders with size: {}", assetOrders.size());
-            for (var entry : getEntries(order, assetOrders)) {
+            for (var entry : getSortedPriceEntries(order, assetOrders)) {
                 matchOrder(order, entry.getValue());
             }
         } else {
@@ -64,7 +64,7 @@ final class DefaultOrderService implements OrderService {
         return order;
     }
 
-    private Set<Map.Entry<Double, List<Order>>> getEntries(Order order, NavigableMap<Double, List<Order>> assetOrders) {
+    private Set<Map.Entry<Double, List<Order>>> getSortedPriceEntries(Order order, NavigableMap<Double, List<Order>> assetOrders) {
         return isBuy(order.getDirection()) ?
                 assetOrders.entrySet() :
                 assetOrders.descendingMap().entrySet();
@@ -102,6 +102,12 @@ final class DefaultOrderService implements OrderService {
 
     }
 
+    /**
+     * Adds the order into the state based on its direction (buy or sell).
+     * This state is used to match orders
+     *
+     * @param order the order to be added
+     */
     private void addOrderIntoState(Order order) {
         // Determine the state based on the order direction
         var state = isBuy(order.getDirection()) ?

@@ -17,6 +17,11 @@ public interface Persistence {
 
     Map<String, NavigableMap<Double, List<Order>>> buyOrders();
 
+    /**
+     * Adds an order to the persistence layer. Used by getOrder(id)
+     *
+     * @param order the order to be added
+     */
     void addOrder(Order order);
 
     Order getOrder(String orderId);

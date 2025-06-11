@@ -48,6 +48,12 @@ public final class Order {
     }
 
 
+    /**
+     * Checks if this order can match with the given counterOrder.
+     *
+     * @param counterOrder the order to check against
+     * @return true if this order can match with the counterOrder, false otherwise
+     */
     public boolean canMatch(Order counterOrder) {
         if (this.asset.equals(counterOrder.getAsset()) &&
             this.direction != counterOrder.getDirection()) {
@@ -60,12 +66,23 @@ public final class Order {
         return false;
     }
 
+    /**
+     * Adds a trade to this order, also Adjust the pending amount accordingly.
+     *
+     * @param trade the trade to add
+     * @return this order instance for method chaining
+     */
     public Order addTrade(Trade trade) {
         this.pendingAmount -= trade.getAmount();
         trades.add(trade);
         return this;
     }
 
+    /**
+     * Checks if the order is fully executed.
+     *
+     * @return true if the pending amount is zero, false otherwise
+     */
     public boolean isFullyExecuted() {
         return 0 == pendingAmount;
     }
